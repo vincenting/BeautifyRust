@@ -1,8 +1,8 @@
 [
   {
     "keys": [
-      "ctrl+alt+k"
+      "ctrl+alt+r"
     ],
-    "command": "beautify_ruby"
+    "command": "beautify_rust"
   }
 ]
