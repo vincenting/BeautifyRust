@@ -66,20 +66,30 @@ def settings_changed():
     settings = Settings()
 
 
+save_without_beautify = False
+
+
 class BeautifyRustOnSave(sublime_plugin.EventListener):
 
     def on_pre_save(self, view):
-        if settings.run_on_save:
-            view.run_command("beautify_rust", {"save": False, "error": False})
+        global save_without_beautify
+        if settings.run_on_save and not save_without_beautify:
+            return view.run_command("beautify_rust", {"save": False})
+        save_without_beautify = False
+        return
 
 
 class BeautifyRustCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit, error=True, save=True):
+    def run(self, edit, save=True):
+        global save_without_beautify
         self.filename = self.view.file_name()
         self.fname = os.path.basename(self.filename)
         if self.is_rust_file():
             self.run_format(edit)
+            if save and settings.save_on_beautify:
+                save_without_beautify = True
+                self.view.run_command('save')
 
     def is_rust_file(self):
         return self.fname.endswith(".rs")
