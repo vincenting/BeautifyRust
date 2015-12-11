@@ -1,5 +1,6 @@
 import os.path
 import sublime
+import tempfile
 import sublime_plugin
 import subprocess
 
@@ -78,7 +79,7 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
         self.filename = self.view.file_name()
         self.fname = os.path.basename(self.filename)
         if self.is_rust_file():
-            self.run_format(edit, [self.filename])
+            self.run_format(edit)
 
     def is_rust_file(self):
         return self.fname.endswith(".rs")
@@ -94,12 +95,20 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
         out = beautifier.communicate()[0].decode('utf8')
         return (out, beautifier.wait())
 
-    def run_format(self, edit, cmd_list):
+    def run_format(self, edit):
         buffer_region = sublime.Region(0, self.view.size())
-        cmd_list.insert(0, settings.rustfmt)
-        cmd_list.append("--write-mode=display")
-        print(cmd_list)
-        (output, exit_code) = self.pipe(cmd_list)
+        buffer_text = self.view.substr(buffer_region)
+        exit_code = -1
+        if buffer_text == "":
+            return
+        fd, filename = tempfile.mkstemp()
+        try:
+            os.write(fd, bytes(buffer_text, 'UTF-8'))
+            cmd_list = [settings.rustfmt, filename, "--write-mode=display"]
+            (output, exit_code) = self.pipe(cmd_list)
+            os.close(fd)
+        finally:
+            os.remove(filename)
         if exit_code == 0:
             self.save_viewport_state()
             fix_lines = '\n'.join(output.splitlines()[2:])
