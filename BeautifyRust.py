@@ -59,9 +59,10 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         beautifier = subprocess.Popen(
-            cmd, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, startupinfo=startupinfo)
-        out = beautifier.communicate()[0].decode('utf8')
-        return (out, beautifier.wait())
+            cmd, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                startupinfo=startupinfo)
+        (out, err) = beautifier.communicate()
+        return (out.decode('utf8'), beautifier.wait(), err.decode('utf8'))
 
     def run_format(self, edit):
         buffer_region = sublime.Region(0, self.view.size())
@@ -77,7 +78,7 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
                     "Beautify rust: can not find {0} in path.".format(self.settings.get("rustfmt", "rustfmt")))
             os.write(fd, bytes(buffer_text, 'UTF-8'))
             cmd_list = [rustfmt_bin, filename, "--write-mode=display"]
-            (output, exit_code) = self.pipe(cmd_list)
+            (output, exit_code, err) = self.pipe(cmd_list)
             os.close(fd)
         finally:
             os.remove(filename)
@@ -88,7 +89,7 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
             self.view.replace(edit, buffer_region, fix_lines)
             self.reset_viewport_state()
         else:
-            print("failed: exit_code:", exit_code, output)
+            print("failed: exit_code: {0}\n{1}".format(exit_code, err.replace(filename, self.filename)))
             sublime.error_message(
                 "Beautify rust: rustfmt process call failed. See log (ctrl + `) for details.")
 
