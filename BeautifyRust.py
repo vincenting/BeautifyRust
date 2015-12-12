@@ -67,7 +67,7 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
     def run_format(self, edit):
         buffer_region = sublime.Region(0, self.view.size())
         buffer_text = self.view.substr(buffer_region)
-        exit_code = -1
+        (output, exit_code, err) = ("", -1, "")
         if buffer_text == "":
             return
         fd, filename = tempfile.mkstemp()
