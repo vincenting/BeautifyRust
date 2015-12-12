@@ -4,7 +4,7 @@ import tempfile
 import sublime_plugin
 import subprocess
 
-settings = None
+SETTINGS_FILE = "BeautifyRust.sublime-settings"
 
 
 def which(program):
@@ -23,57 +23,13 @@ def which(program):
     return None
 
 
-class Settings:
-
-    def __init__(self):
-        package_settings = sublime.load_settings(
-            "BeautifyRust.sublime-settings")
-        package_settings.add_on_change("rustfmt", settings_changed)
-        package_settings.add_on_change("run_on_save", settings_changed)
-        package_settings.add_on_change("save_on_beautify", settings_changed)
-
-        self.rustfmt = package_settings.get("rustfmt", which('rustfmt'))
-        if self.rustfmt == None:
-            sublime.error_message(
-                "Beautify rust: can not find {0} in path.".format(package_settings.get("rustfmt", "rustfmt")))
-        self.run_on_save = package_settings.get("run_on_save", False)
-        self.save_on_beautify = package_settings.get("save_on_beautify", True)
-        self.package_settings = package_settings
-
-    def unload(self):
-        self.package_settings.clear_on_change("rustfmt")
-        self.package_settings.clear_on_change("run_on_save")
-        self.package_settings.clear_on_change("save_on_beautify")
-
-
-def plugin_loaded():
-    global settings
-    settings = Settings()
-
-
-def plugin_unloaded():
-    global settings
-    if settings != None:
-        settings.unload()
-        settings = None
-
-
-def settings_changed():
-    global settings
-    if settings != None:
-        settings.unload()
-        settings = None
-    settings = Settings()
-
-
 save_without_beautify = False
-
 
 class BeautifyRustOnSave(sublime_plugin.EventListener):
 
     def on_pre_save(self, view):
         global save_without_beautify
-        if settings.run_on_save and not save_without_beautify:
+        if sublime.load_settings(SETTINGS_FILE).get("run_on_save", False) and not save_without_beautify:
             return view.run_command("beautify_rust", {"save": False})
         save_without_beautify = False
         return
@@ -85,11 +41,13 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
         global save_without_beautify
         self.filename = self.view.file_name()
         self.fname = os.path.basename(self.filename)
+        self.settings = sublime.load_settings(SETTINGS_FILE)
         if self.is_rust_file():
             self.run_format(edit)
-            if save and settings.save_on_beautify:
+            if save and self.settings.get("save_on_beautify", True):
                 save_without_beautify = True
-                self.view.run_command('save')
+                sublime.set_timeout(lambda: self.view.run_command("save"), 0)
+
 
     def is_rust_file(self):
         return self.fname.endswith(".rs")
@@ -113,8 +71,12 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
             return
         fd, filename = tempfile.mkstemp()
         try:
+            rustfmt_bin = which(self.settings.get("rustfmt", "rustfmt"))
+            if rustfmt_bin == None:
+                return sublime.error_message(
+                    "Beautify rust: can not find {0} in path.".format(self.settings.get("rustfmt", "rustfmt")))
             os.write(fd, bytes(buffer_text, 'UTF-8'))
-            cmd_list = [settings.rustfmt, filename, "--write-mode=display"]
+            cmd_list = [rustfmt_bin, filename, "--write-mode=display"]
             (output, exit_code) = self.pipe(cmd_list)
             os.close(fd)
         finally:
