@@ -30,14 +30,14 @@ class BeautifyRustOnSave(sublime_plugin.EventListener):
     def on_pre_save(self, view):
         global save_without_beautify
         if sublime.load_settings(SETTINGS_FILE).get("run_on_save", False) and not save_without_beautify:
-            return sublime.set_timeout(lambda: view.run_command("beautify_rust", {"save": False}), 0)
+            return sublime.set_timeout(lambda: view.run_command("beautify_rust"), 0)
         save_without_beautify = False
         return
 
 
 class BeautifyRustCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit, save=True):
+    def run(self, edit):
         global save_without_beautify
         self.filename = self.view.file_name()
         self.fname = os.path.basename(self.filename)
@@ -69,12 +69,10 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
         if rustfmt_bin == None:
             return sublime.error_message(
                 "Beautify rust: can not find {0} in path.".format(self.settings.get("rustfmt", "rustfmt")))
-        cmd_list = [rustfmt_bin, self.filename]
+        cmd_list = [rustfmt_bin, self.filename, "--write-mode=overwrite"]
         self.save_viewport_state()
         (exit_code, err) = self.pipe(cmd_list)
-        if exit_code == 0 and err == "":
-        	os.remove("{0}.bk".format(self.filename))
-        else:
+        if exit_code != 0 or err != "":
             self.view.replace(edit, buffer_region, buffer_text)
             print("failed: exit_code: {0}\n{1}".format(exit_code, err))
             sublime.error_message(
