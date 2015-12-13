@@ -1,4 +1,3 @@
 {
-  "run_on_save": true,
-  "rustfmt": "/Users/vt/.cargo/bin/rustfmt"
+  "run_on_save": false
 }

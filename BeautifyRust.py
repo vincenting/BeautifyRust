@@ -22,23 +22,17 @@ def which(program):
     return None
 
 
-save_without_beautify = False
-
-
 class BeautifyRustOnSave(sublime_plugin.EventListener):
 
-    def on_pre_save(self, view):
-        global save_without_beautify
-        if sublime.load_settings(SETTINGS_FILE).get("run_on_save", False) and not save_without_beautify:
-            return sublime.set_timeout(lambda: view.run_command("beautify_rust"), 0)
-        save_without_beautify = False
+    def on_post_save(self, view):
+        if sublime.load_settings(SETTINGS_FILE).get("run_on_save", False):
+            return view.run_command("beautify_rust")
         return
 
 
 class BeautifyRustCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
-        global save_without_beautify
         self.filename = self.view.file_name()
         self.fname = os.path.basename(self.filename)
         self.settings = sublime.load_settings(SETTINGS_FILE)
