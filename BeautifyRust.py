@@ -1,6 +1,5 @@
 import os.path
 import sublime
-import tempfile
 import sublime_plugin
 import subprocess
 
@@ -25,12 +24,13 @@ def which(program):
 
 save_without_beautify = False
 
+
 class BeautifyRustOnSave(sublime_plugin.EventListener):
 
     def on_pre_save(self, view):
         global save_without_beautify
         if sublime.load_settings(SETTINGS_FILE).get("run_on_save", False) and not save_without_beautify:
-            return view.run_command("beautify_rust", {"save": False})
+            return sublime.set_timeout(lambda: view.run_command("beautify_rust", {"save": False}), 0)
         save_without_beautify = False
         return
 
@@ -44,10 +44,6 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
         self.settings = sublime.load_settings(SETTINGS_FILE)
         if self.is_rust_file():
             self.run_format(edit)
-            if save and self.settings.get("save_on_beautify", True):
-                save_without_beautify = True
-                sublime.set_timeout(lambda: self.view.run_command("save"), 0)
-
 
     def is_rust_file(self):
         return self.fname.endswith(".rs")
@@ -60,43 +56,31 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         beautifier = subprocess.Popen(
             cmd, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                startupinfo=startupinfo)
-        (out, err) = beautifier.communicate()
-        return (out.decode('utf8'), beautifier.wait(), err.decode('utf8'))
+            startupinfo=startupinfo)
+        (_, err) = beautifier.communicate()
+        return (beautifier.wait(), err.decode('utf8'))
 
     def run_format(self, edit):
         buffer_region = sublime.Region(0, self.view.size())
         buffer_text = self.view.substr(buffer_region)
-        (output, exit_code, err) = ("", -1, "")
         if buffer_text == "":
             return
-        fd, filename = tempfile.mkstemp()
-        try:
-            rustfmt_bin = which(self.settings.get("rustfmt", "rustfmt"))
-            if rustfmt_bin == None:
-                return sublime.error_message(
-                    "Beautify rust: can not find {0} in path.".format(self.settings.get("rustfmt", "rustfmt")))
-            os.write(fd, bytes(buffer_text, 'UTF-8'))
-            cmd_list = [rustfmt_bin, filename, "--write-mode=display"]
-            (output, exit_code, err) = self.pipe(cmd_list)
-            os.close(fd)
-        finally:
-            os.remove(filename)
-        if exit_code == 0:
-            self.save_viewport_state()
-            fix_lines = '\n'.join(output.splitlines()[2:])
-            self.check_valid_output(fix_lines)
-            self.view.replace(edit, buffer_region, fix_lines)
-            self.reset_viewport_state()
+        rustfmt_bin = which(self.settings.get("rustfmt", "rustfmt"))
+        if rustfmt_bin == None:
+            return sublime.error_message(
+                "Beautify rust: can not find {0} in path.".format(self.settings.get("rustfmt", "rustfmt")))
+        cmd_list = [rustfmt_bin, self.filename]
+        self.save_viewport_state()
+        (exit_code, err) = self.pipe(cmd_list)
+        if exit_code == 0 and err == "":
+        	os.remove("{0}.bk".format(self.filename))
         else:
-            print("failed: exit_code: {0}\n{1}".format(exit_code, err.replace(filename, self.filename)))
+            self.view.replace(edit, buffer_region, buffer_text)
+            print("failed: exit_code: {0}\n{1}".format(exit_code, err))
             sublime.error_message(
                 "Beautify rust: rustfmt process call failed. See log (ctrl + `) for details.")
-
-    def check_valid_output(self, text):
-        if text == "":
-            msg = "invalid output. Check your rustfmt interpreter settings"
-            raise Exception(msg)
+        self.view.window().run_command("reload_all_files")
+        self.reset_viewport_state()
 
     def save_viewport_state(self):
         self.previous_selection = [(region.a, region.b)

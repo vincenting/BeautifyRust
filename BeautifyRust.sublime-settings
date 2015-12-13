@@ -1,4 +1,4 @@
 {
-  "run_on_save": false,
-  "save_on_beautify": true
+  "run_on_save": true,
+  "rustfmt": "/Users/vt/.cargo/bin/rustfmt"
 }
