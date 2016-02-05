@@ -69,8 +69,9 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
         if exit_code != 0 or err != "":
             self.view.replace(edit, buffer_region, buffer_text)
             print("failed: exit_code: {0}\n{1}".format(exit_code, err))
-            sublime.error_message(
-                "Beautify rust: rustfmt process call failed. See log (ctrl + `) for details.")
+            if sublime.load_settings(SETTINGS_FILE).get("show_errors", True):
+                sublime.error_message(
+                    "Beautify rust: rustfmt process call failed. See log (ctrl + `) for details.")
         self.view.window().run_command("reload_all_files")
         self.reset_viewport_state()
 

@@ -12,6 +12,7 @@ A binding for Sublime Text to the [Rustfmt](https://github.com/rust-lang-nursery
 ```
 {
   "run_on_save": false,
+  "show_errors": true,
   "rustfmt": "/Users/user/.cargo/bin/rustfmt"
 }
 ```
