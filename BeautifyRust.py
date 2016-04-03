@@ -66,7 +66,7 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
         cmd_list = [rustfmt_bin, self.filename, "--write-mode=overwrite"]
         self.save_viewport_state()
         (exit_code, err) = self.pipe(cmd_list)
-        if exit_code != 0 or err != "":
+        if exit_code != 0 or (err != "" and not err.startswith("Using rustfmt")):
             self.view.replace(edit, buffer_region, buffer_text)
             print("failed: exit_code: {0}\n{1}".format(exit_code, err))
             if sublime.load_settings(SETTINGS_FILE).get("show_errors", True):
