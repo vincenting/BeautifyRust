@@ -60,7 +60,7 @@ class BeautifyRustCommand(sublime_plugin.TextCommand):
         if buffer_text == "":
             return
         rustfmt_bin = which(self.settings.get("rustfmt", "rustfmt"))
-        if rustfmt_bin == None:
+        if rustfmt_bin is None:
             return sublime.error_message(
                 "Beautify rust: can not find {0} in path.".format(self.settings.get("rustfmt", "rustfmt")))
         cmd_list = [rustfmt_bin, self.filename, "--write-mode=overwrite"]
