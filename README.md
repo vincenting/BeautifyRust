@@ -14,6 +14,12 @@ A binding for Sublime Text to the [Rustfmt](https://github.com/rust-lang-nursery
   "run_on_save": false,
   "show_errors": true,
   "rustfmt": "/Users/user/.cargo/bin/rustfmt"
+
+  // Optionally, you may specify an array of arguments to pass to rustfmt
+  // For example, if you have a system wide rustfmt configuration file
+  // "args": [
+  //     "--config-path=/Users/user/.rust/"
+  // ]
 }
 ```
 
