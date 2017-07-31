@@ -1,4 +1,5 @@
 import os.path
+import shutil
 import sublime
 import sublime_plugin
 import subprocess
@@ -14,12 +15,7 @@ def which(program):
         if is_exe(program):
             return program
     else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            path = path.strip('"')
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-    return None
+        return shutil.which(program)
 
 
 class BeautifyRustOnSave(sublime_plugin.EventListener):
